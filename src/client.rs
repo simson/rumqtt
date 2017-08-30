@@ -61,7 +61,7 @@ impl MqttClient {
         Ok(())
     }
 
-    pub fn publish(&mut self, topic: &str, qos: QualityOfService, payload: Vec<u8>) -> Result<()> {
+    pub fn publish(&self, topic: &str, qos: QualityOfService, payload: Vec<u8>) -> Result<()> {
         let payload = Arc::new(payload);
         let mut ret_val;
         loop {
@@ -84,12 +84,12 @@ impl MqttClient {
         ret_val
     }
 
-    pub fn retained_publish(&mut self, topic: &str, qos: QualityOfService, payload: Vec<u8>) -> Result<()> {
+    pub fn retained_publish(&self, topic: &str, qos: QualityOfService, payload: Vec<u8>) -> Result<()> {
         let payload = Arc::new(payload);
         self._publish(topic, true, qos, payload, None)
     }
 
-    pub fn userdata_publish(&mut self, topic: &str, qos: QualityOfService, payload: Vec<u8>, userdata: Vec<u8>) -> Result<()> {
+    pub fn userdata_publish(&self, topic: &str, qos: QualityOfService, payload: Vec<u8>, userdata: Vec<u8>) -> Result<()> {
         let payload = Arc::new(payload);
         let userdata = Arc::new(userdata);
         let mut ret_val;
@@ -134,7 +134,7 @@ impl MqttClient {
         Ok(())
     }
 
-    fn _publish(&mut self,
+    fn _publish(&self,
                 topic: &str,
                 retain: bool,
                 qos: QualityOfService,
