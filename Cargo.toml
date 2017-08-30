@@ -14,11 +14,11 @@ keywords = ["mqtt", "iot"]
 log = "0.3"
 rand = "0.3"
 time = "0.1"
-threadpool = "1.3"
+threadpool = "^1.4"
 quick-error = "1.1"
-mqtt-protocol = "0.3"
+mqtt-protocol = "0.4"
 openssl = { version = "0.9" }
 
 [dev-dependencies]
-clippy = "0"
+#clippy = "0"
 env_logger = "0.3"

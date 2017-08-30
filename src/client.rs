@@ -4,9 +4,8 @@ use std::sync::Arc;
 use std::thread;
 use std::sync::mpsc::{sync_channel, SyncSender};
 
-use mqtt::{QualityOfService, TopicFilter};
+use mqtt::{QualityOfService, TopicFilter, TopicName};
 use mqtt::packet::*;
-use mqtt::topic_name::TopicName;
 
 use error::{Result, Error};
 use message::Message;
@@ -55,7 +54,7 @@ impl MqttClient {
     pub fn subscribe(&mut self, topics: Vec<(&str, QualityOfService)>) -> Result<()> {
         let mut sub_topics = Vec::with_capacity(topics.len());
         for topic in topics {
-            let topic = (TopicFilter::new_checked(topic.0)?, topic.1);
+            let topic = (TopicFilter::new(topic.0)?, topic.1);
             sub_topics.push(topic);
         }
         self.nw_request_tx.send(NetworkRequest::Subscribe(sub_topics))?;
