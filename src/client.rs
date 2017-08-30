@@ -51,7 +51,7 @@ impl MqttClient {
         Ok(client)
     }
 
-    pub fn subscribe(&mut self, topics: Vec<(&str, QualityOfService)>) -> Result<()> {
+    pub fn subscribe(self, topics: Vec<(&str, QualityOfService)>) -> Result<()> {
         let mut sub_topics = Vec::with_capacity(topics.len());
         for topic in topics {
             let topic = (TopicFilter::new(topic.0)?, topic.1);
