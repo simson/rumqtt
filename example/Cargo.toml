@@ -1,0 +1,13 @@
+[package]
+authors = ["Rick Richardson <rick@quiver.zone>"]
+name = "example-rumqtt"
+version = "0.1.0"
+description = "An example application leveraging the rumqtt crate"
+repository = "https://github.com/QuiverMedia/rumqtt/example"
+readme = "README.md"
+license = "Unlicense/MIT"
+keywords = ["mqtt", "iot"]
+
+[dependencies.rumqtt]
+path = "../"
+
