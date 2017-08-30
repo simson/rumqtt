@@ -814,6 +814,7 @@ mod test {
             stream: NetworkStream::None,
             nw_request_rx: rx,
             state: MqttState::Disconnected,
+            dont_reconnect: false,
             initial_connect: true,
             await_pingresp: false,
             last_flush: Instant::now(),
