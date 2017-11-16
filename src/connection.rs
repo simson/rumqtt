@@ -91,15 +91,20 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn connect(addr: SocketAddr,
-                   opts: MqttOptions,
-                   nw_request_rx: Receiver<NetworkRequest>,
-                   callback: Option<MqttCallback>)
-                   -> Result<Self> {
+    pub fn connect(
+        addr: SocketAddr,
+        opts: MqttOptions,
+        nw_request_rx: Receiver<NetworkRequest>,
+        callback: Option<MqttCallback>,
+    ) -> Result<Self> {
 
         let mut connection = Connection {
             addr: addr,
-            domain: opts.addr.split(":").map(str::to_string).next().unwrap_or_default(),
+            domain: opts.addr
+                .split(":")
+                .map(str::to_string)
+                .next()
+                .unwrap_or_default(),
             opts: opts,
             stream: NetworkStream::None,
             nw_request_rx: nw_request_rx,
@@ -136,14 +141,21 @@ impl Connection {
         connection.await_connack()?;
         connection.state = MqttState::Connected;
         info!("$$$ Connected to broker");
-        connection.stream.set_read_timeout(Some(Duration::new(1, 0)))?;
-        connection.stream.set_write_timeout(Some(Duration::new(10, 0)))?;
+        connection.stream.set_read_timeout(
+            Some(Duration::new(1, 0)),
+        )?;
+        connection.stream.set_write_timeout(
+            Some(Duration::new(10, 0)),
+        )?;
         Ok(connection)
     }
 
     pub fn run(&mut self) -> Result<()> {
         'reconnect: loop {
             loop {
+                if self.opts.reconnect == 0 {
+                    self.dont_reconnect = true;
+                }
                 if self.initial_connect {
                     self.initial_connect = false;
                     break;
@@ -151,7 +163,7 @@ impl Connection {
                     // Don't reconnect if we've explicitly disconnected
                     if self.dont_reconnect {
                         info!("$$$ Terminating due to explicit user request");
-                        return Ok(())
+                        return Ok(());
                     }
 
                     self.state = MqttState::Disconnected;
@@ -262,11 +274,11 @@ impl Connection {
                     NetworkRequest::Shutdown => {
                         self.dont_reconnect = true;
                         self.stream.shutdown(Shutdown::Both)?
-                    },
+                    }
                     NetworkRequest::Disconnect => {
                         self.dont_reconnect = true;
                         self.disconnect()?
-                    },
+                    }
                     NetworkRequest::Publish(m) => self.publish(m)?,
                     NetworkRequest::Subscribe(s) => {
                         self.subscriptions.push_back(s.clone());
@@ -303,7 +315,9 @@ impl Connection {
     }
 
     fn await_connack(&mut self) -> Result<VariablePacket> {
-        let packet = VariablePacket::decode(&mut self.stream).map_err(|_| Error::InvalidPacket)?;
+        let packet = VariablePacket::decode(&mut self.stream).map_err(|_| {
+            Error::InvalidPacket
+        })?;
         match self.state {
             MqttState::Handshake => {
                 match packet {
@@ -402,9 +416,9 @@ impl Connection {
     fn handle_puback(&mut self, puback: &PubackPacket) -> Result<HandlePacket> {
         let pkid = puback.packet_identifier();
         debug!("*** PubAck --> Pkid({:?})\n--- Publish Queue =\n{:#?}\n\n", pkid, self.outgoing_pub);
-        let m = match self.outgoing_pub
-            .iter()
-            .position(|x| x.get_pkid() == Some(pkid)) {
+        let m = match self.outgoing_pub.iter().position(
+            |x| x.get_pkid() == Some(pkid),
+        ) {
             Some(i) => {
                 if let Some(m) = self.outgoing_pub.remove(i) {
                     Some(*m)
@@ -424,9 +438,9 @@ impl Connection {
     fn handle_pubrec(&mut self, pubrec: &PubrecPacket) -> Result<HandlePacket> {
         let pkid = pubrec.packet_identifier();
         debug!("*** PubRec --> Pkid({:?})\n--- Record Queue =\n{:#?}\n\n", pkid, self.outgoing_rec);
-        let m = match self.outgoing_rec
-            .iter()
-            .position(|x| x.get_pkid() == Some(pkid)) {
+        let m = match self.outgoing_rec.iter().position(
+            |x| x.get_pkid() == Some(pkid),
+        ) {
             Some(i) => {
                 if let Some(m) = self.outgoing_rec.remove(i) {
                     Some(*m)
@@ -453,9 +467,9 @@ impl Connection {
 
     fn handle_pubrel(&mut self, pubrel: &PubrelPacket) -> Result<HandlePacket> {
         let pkid = pubrel.packet_identifier();
-        let message = match self.incoming_rec
-            .iter()
-            .position(|x| x.get_pkid() == Some(pkid)) {
+        let message = match self.incoming_rec.iter().position(
+            |x| x.get_pkid() == Some(pkid),
+        ) {
             Some(i) => {
                 if let Some(message) = self.incoming_rec.remove(i) {
                     self.outgoing_comp.push_back(PacketIdentifier(pkid));
@@ -483,9 +497,9 @@ impl Connection {
 
     fn handle_pubcomp(&mut self, pubcomp: &PubcompPacket) -> Result<HandlePacket> {
         let pkid = pubcomp.packet_identifier();
-        match self.outgoing_rel
-            .iter()
-            .position(|x| *x == PacketIdentifier(pkid)) {
+        match self.outgoing_rel.iter().position(
+            |x| *x == PacketIdentifier(pkid),
+        ) {
             Some(pos) => self.outgoing_rel.remove(pos),
             None => {
                 error!("Oopssss..unsolicited complete --> {:?}", pubcomp);
@@ -536,10 +550,12 @@ impl Connection {
 
     // TODO: Rename to handle incoming publish
     fn handle_message(&mut self, message: Box<Message>) -> Result<HandlePacket> {
-        debug!("       Publish {:?} {:?} < {:?} bytes",
-               message.qos,
-               message.topic.to_string(),
-               message.payload.len());
+        debug!(
+            "       Publish {:?} {:?} < {:?} bytes",
+            message.qos,
+            message.topic.to_string(),
+            message.payload.len()
+        );
         match message.qos {
             QoSWithPacketIdentifier::Level0 => Ok(HandlePacket::Publish(message)),
             QoSWithPacketIdentifier::Level1(pkid) => {
@@ -552,9 +568,9 @@ impl Connection {
             // @ so only pushback is pkid is new. and resend pubcomp.
             // @ TODO: Analyze broker crash cases for all queues.
             QoSWithPacketIdentifier::Level2(pkid) => {
-                match self.incoming_rec
-                    .iter()
-                    .position(|ref x| x.get_pkid() == Some(pkid)) {
+                match self.incoming_rec.iter().position(
+                    |ref x| x.get_pkid() == Some(pkid),
+                ) {
                     Some(i) => {
                         self.incoming_rec[i] = message.clone();
                     }
@@ -763,7 +779,7 @@ impl Connection {
 
     #[inline]
     fn write_packet(&mut self, packet: Vec<u8>) -> Result<()> {
-        if let Err(e) = self.stream.write_all(&packet){
+        if let Err(e) = self.stream.write_all(&packet) {
             warn!("{:?}", e);
             return Err(e.into());
         }
@@ -806,7 +822,11 @@ mod test {
         let addr = lookup_ipv4("test.mosquitto.org:1883");
         let (_, rx) = sync_channel(10);
         let opts = MqttOptions::new();
-        let domain = opts.addr.split(":").map(str::to_string).next().unwrap_or_default();
+        let domain = opts.addr
+            .split(":")
+            .map(str::to_string)
+            .next()
+            .unwrap_or_default();
         let conn = Connection {
             addr: addr,
             opts: opts,

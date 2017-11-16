@@ -2,6 +2,7 @@ use std::net::{SocketAddr, ToSocketAddrs};
 use std::str;
 use std::sync::Arc;
 use std::thread;
+use std::process;
 use std::sync::mpsc::{sync_channel, SyncSender};
 
 use mqtt::{QualityOfService, TopicFilter, TopicName};
@@ -43,7 +44,7 @@ impl MqttClient {
         thread::spawn(move || -> Result<()> {
             let _ = connection.run();
             error!("Network Thread Stopped !!!!!!!!!");
-            Ok(())
+            process::exit(1);
         });
 
         let client = MqttClient { nw_request_tx: nw_request_tx };
@@ -57,7 +58,9 @@ impl MqttClient {
             let topic = (TopicFilter::new(topic.0)?, topic.1);
             sub_topics.push(topic);
         }
-        self.nw_request_tx.send(NetworkRequest::Subscribe(sub_topics))?;
+        self.nw_request_tx.send(
+            NetworkRequest::Subscribe(sub_topics),
+        )?;
         Ok(())
     }
 
@@ -113,12 +116,13 @@ impl MqttClient {
         ret_val
     }
 
-    pub fn retained_userdata_publish(&mut self,
-                                     topic: &str,
-                                     qos: QualityOfService,
-                                     payload: Vec<u8>,
-                                     userdata: Vec<u8>)
-                                     -> Result<()> {
+    pub fn retained_userdata_publish(
+        &mut self,
+        topic: &str,
+        qos: QualityOfService,
+        payload: Vec<u8>,
+        userdata: Vec<u8>,
+    ) -> Result<()> {
         let payload = Arc::new(payload);
         let userdata = Arc::new(userdata);
         self._publish(topic, true, qos, payload, Some(userdata))
@@ -134,13 +138,14 @@ impl MqttClient {
         Ok(())
     }
 
-    fn _publish(&self,
-                topic: &str,
-                retain: bool,
-                qos: QualityOfService,
-                payload: Arc<Vec<u8>>,
-                userdata: Option<Arc<Vec<u8>>>)
-                -> Result<()> {
+    fn _publish(
+        &self,
+        topic: &str,
+        retain: bool,
+        qos: QualityOfService,
+        payload: Arc<Vec<u8>>,
+        userdata: Option<Arc<Vec<u8>>>,
+    ) -> Result<()> {
 
         let topic = TopicName::new(topic.to_string())?;
         let qos_pkid = match qos {
@@ -161,7 +166,11 @@ impl MqttClient {
         match qos {
             QualityOfService::Level0 |
             QualityOfService::Level1 |
-            QualityOfService::Level2 => self.nw_request_tx.try_send(NetworkRequest::Publish(message))?,
+            QualityOfService::Level2 => {
+                self.nw_request_tx.try_send(
+                    NetworkRequest::Publish(message),
+                )?
+            }
         };
 
         Ok(())
@@ -209,7 +218,9 @@ mod test {
         match mock_start(client_options, true) {
             Ok(mut mq_client) => {
                 for _ in 0..65536 {
-                    mq_client._publish("hello/world", false, QoS::Level1, Arc::new(vec![1u8, 2, 3]), None).unwrap();
+                    mq_client
+                        ._publish("hello/world", false, QoS::Level1, Arc::new(vec![1u8, 2, 3]), None)
+                        .unwrap();
                 }
             }
             Err(e) => panic!("{:?}", e),
@@ -224,7 +235,9 @@ mod test {
         match mock_start(client_options, false) {
             Ok(mut mq_client) => {
                 for _ in 0..65536 {
-                    mq_client._publish("hello/world", false, QoS::Level1, Arc::new(vec![1u8, 2, 3]), None).unwrap();
+                    mq_client
+                        ._publish("hello/world", false, QoS::Level1, Arc::new(vec![1u8, 2, 3]), None)
+                        .unwrap();
                 }
             }
             Err(e) => panic!("{:?}", e),
