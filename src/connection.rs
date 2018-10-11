@@ -309,6 +309,7 @@ impl Connection {
         };
 
         self.stream = stream;
+        self.stream.set_nodelay(true);
         let connect = genpack::generate_connect_packet(self.opts.clone())?;
         self.write_packet(connect)?;
         Ok(())

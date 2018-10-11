@@ -60,6 +60,14 @@ impl NetworkStream {
     //     }
     // }
 
+    pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
+        match *self {
+            NetworkStream::Tcp(ref s) => s.set_nodelay(nodelay),
+            NetworkStream::Tls(ref s) => s.get_ref().set_nodelay(nodelay),
+            NetworkStream::None => Err(io::Error::new(io::ErrorKind::Other, "No stream!")),
+        }
+    }
+
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
         match *self {
             NetworkStream::Tcp(ref s) => s.shutdown(how),
