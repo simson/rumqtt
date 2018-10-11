@@ -2,6 +2,7 @@ use std::net::{TcpStream, SocketAddr, Shutdown};
 use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
 use std::thread;
+use std::time;
 use std::io::{Write, ErrorKind};
 use std::collections::VecDeque;
 
@@ -785,6 +786,7 @@ impl Connection {
             return Err(e.into());
         }
         self.flush()?;
+        thread::sleep(time::Duration::from_millis(10));
         Ok(())
     }
 
