@@ -106,8 +106,8 @@ impl Write for NetworkStream {
 
     fn flush(&mut self) -> io::Result<()> {
         match *self {
-            NetworkStream::Tcp(ref mut s) => s.flush(),
-            NetworkStream::Tls(ref mut s) => s.flush(),
+            NetworkStream::Tcp(ref mut s) => Ok(()),
+            NetworkStream::Tls(ref mut s) => Ok(()),
             NetworkStream::None => Err(io::Error::new(io::ErrorKind::Other, "No stream!")),
         }
     }
